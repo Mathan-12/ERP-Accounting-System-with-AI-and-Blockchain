@@ -1,0 +1,350 @@
+import React, { useState,useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { Plus, Search, Edit, Trash2, X, Phone, Mail, MapPin, ArrowLeft, Building2, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import api from '../api/axios';
+import { useSearch } from '../context/SearchContext';
+
+const SupplierModal = ({ isOpen, onClose, supplier }) => {
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+        defaultValues: supplier || { name: '', contact: '', phone: '', email: '', address: '' }
+    });
+    const queryClient = useQueryClient();
+
+    React.useEffect(() => {
+        reset(supplier || { name: '', contact: '', phone: '', email: '', address: '' });
+    }, [supplier, reset]);
+
+    const mutation = useMutation({
+        mutationFn: (data) => {
+            if (supplier?.id) {
+                return api.put(`/suppliers/${supplier.id}`, data);
+            }
+            return api.post('/suppliers', data);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['suppliers']);
+            toast.success(supplier ? 'Supplier updated' : 'Supplier created');
+            onClose();
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Operation failed');
+        }
+    });
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+            <div className="bg-white rounded-[2.5rem] max-w-2xl w-full p-10 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300">
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <span className="text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Supplier Master</span>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                            {supplier ? 'Edit Supplier' : 'New Supplier'}
+                        </h2>
+                    </div>
+                    <button onClick={onClose} className="p-3 bg-slate-50 text-slate-400 hover:text-slate-900 rounded-2xl transition-all">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <Building2 className="w-3 h-3 mr-2" /> Company Name
+                                </label>
+                                <input
+                                    {...register('name', { required: 'Name is required' })}
+                                    placeholder="e.g., ABC Suppliers Ltd"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                                {errors.name && <span className="text-red-500 text-xs font-bold">{errors.name.message}</span>}
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <User className="w-3 h-3 mr-2" /> Contact Person
+                                </label>
+                                <input
+                                    {...register('contact')}
+                                    placeholder="John Doe"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <Phone className="w-3 h-3 mr-2" /> Phone Number
+                                </label>
+                                <input
+                                    {...register('phone')}
+                                    placeholder="+91-9876543210"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <Mail className="w-3 h-3 mr-2" /> Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    {...register('email')}
+                                    placeholder="supplier@company.com"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <MapPin className="w-3 h-3 mr-2" /> Address
+                                </label>
+                                <textarea
+                                    {...register('address')}
+                                    rows="5"
+                                    placeholder="Street, City, State, ZIP"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900 resize-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-6">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 font-black text-slate-600 uppercase tracking-widest text-xs transition-all"
+                        >
+                            Discard
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="flex-1 px-8 py-5 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 font-black uppercase tracking-widest text-xs transition-all disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Saving...' : 'Save Supplier'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const Suppliers = () => {
+    const navigate = useNavigate();
+    const { searchTerm, setSearchTerm } = useSearch();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 5;
+    const statusFilter = 'all';
+
+    // Query updated to include pagination & search params
+    const { data: response = {}, isLoading, isFetching } = useQuery({
+        queryKey: ['suppliers', currentPage, searchTerm, statusFilter],
+        queryFn: async () => {
+            const res = await api.get('/suppliers', {
+                params: {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    search: searchTerm
+                }
+            });
+            // Support both paginated and unpaginated responses
+            return res.data;
+        },
+        keepPreviousData: true
+    });
+
+    const queryClient = useQueryClient();
+    const deleteMutation = useMutation({
+        mutationFn: (id) => api.delete(`/suppliers/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['suppliers']);
+            toast.success('Supplier deleted');
+        },
+        onError: () => toast.error('Failed to delete supplier')
+    });
+
+    const handleEdit = (supplier) => {
+        setSelectedSupplier(supplier);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure?')) {
+            deleteMutation.mutate(id);
+        }
+    };
+
+    // Since backend handles filtering and pagination, we just read the returned array
+    const filtered = Array.isArray(response) ? response : (response.data || []);
+    // Also pull metadata if available (if not, fallback to 1)
+    const totalPages = response.totalPages || Math.ceil(filtered.length / rowsPerPage) || 1;
+    const totalRecords = response.total || filtered.length;
+    
+    // We display rows directly from filtered (already paginated by backend)
+    const paginatedData = filtered;
+
+    // reset to page 1 when any search/filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    return (
+        <div className="space-y-8">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="p-3 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-2xl transition-all"
+                        title="Back to Dashboard"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <span className="text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] block">Supplier Management</span>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">All Suppliers</h1>
+                    </div>
+                </div>
+                <button
+                    onClick={() => { setSelectedSupplier(null); setIsModalOpen(true); }}
+                    className="flex items-center px-6 py-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 font-black uppercase tracking-widest text-xs transition-all"
+                >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Supplier
+                </button>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-8 border-b border-slate-100">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                            <Search className="w-5 h-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search suppliers by name or email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-16 pr-6 py-5 bg-white border-2 border-slate-100 rounded-[2rem] focus:ring-8 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black text-slate-900 shadow-sm placeholder:text-slate-400"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-6 flex items-center text-slate-300 hover:text-slate-600 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead className="bg-slate-50/50">
+                            <tr>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Company</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact Person</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Phone</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Email</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Address</th>
+                                <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-100">
+                            {isLoading || isFetching ? (
+                                <tr>
+                                    <td colSpan="6" className="px-8 py-12 text-center text-slate-400 font-bold">Loading suppliers...</td>
+                                </tr>
+                            ) : paginatedData.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="px-8 py-12 text-center text-slate-400 font-bold">No suppliers found</td>
+                                </tr>
+                            ) : (
+                                paginatedData.map((supplier) => (
+                                    <tr key={supplier.id} className="hover:bg-slate-50 transition-colors group">
+                                        <td className="px-8 py-5 whitespace-nowrap">
+                                            <div className="text-sm font-black text-slate-900">{supplier.name}</div>
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600">
+                                            {supplier.contact || '-'}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600">
+                                            {supplier.phone || '-'}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600">
+                                            {supplier.email || '-'}
+                                        </td>
+                                        <td className="px-8 py-5 text-sm font-bold text-slate-600">
+                                            {supplier.address || '-'}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={() => handleEdit(supplier)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(supplier.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                                        <div className="flex items-center justify-between p-8 border-t border-slate-50">
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        Showing suppliers {paginatedData.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0} to {(currentPage - 1) * rowsPerPage + paginatedData.length} of {totalRecords} entries
+    </p>
+    
+    <div className="flex items-center gap-2">
+        <button 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 hover:text-white disabled:opacity-30 transition-all border border-slate-100"
+        >
+            Previous
+        </button>
+        
+        <span className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-widest">
+            Page {currentPage} of {totalPages}
+        </span>
+        
+        <button 
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 hover:text-white disabled:opacity-30 transition-all border border-slate-100"
+        >
+            Next
+        </button>
+    </div>
+</div>
+                </div>
+            </div>
+
+            <SupplierModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                supplier={selectedSupplier}
+            />
+        </div>
+    );
+};
+
+export default Suppliers;

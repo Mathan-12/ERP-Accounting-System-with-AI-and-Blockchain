@@ -1,0 +1,72 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './context/AuthContext';
+import { SearchProvider } from './context/SearchContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './layouts/DashboardLayout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Products from './pages/Products';
+import Register from './pages/Register';
+import StockSummary from './pages/Inventory';
+import SalesInvoice from './pages/SalesInvoice';
+import ProfitLoss from './pages/ProfitLoss';
+import Suppliers from './pages/Suppliers';
+import Customers from './pages/Customers';
+import Purchases from './pages/Purchases';
+import Banking from './pages/Banking';
+import StockMovements from './pages/StockMovements';
+import Invoices from './pages/Invoices';
+import Sales from './pages/Sales';
+import AIChatbot from './pages/AIChatbot';
+import StockLevels from './pages/StockLevels';
+import Forecasting from './pages/Forecasting';
+import Approvals from './pages/Approvals';
+import Blockchain from './pages/Blockchain';
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <SearchProvider>
+          <Toaster position="top-right" />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route element={<DashboardLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/sales" element={<Sales />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/stock-movements" element={<StockMovements />} />
+                <Route path="/reports/profit-loss" element={<ProfitLoss />} />
+                <Route path="/inventory" element={<StockSummary />} />
+                <Route path="/active-stock" element={<StockSummary />} />
+                <Route path="/ai-chat" element={<AIChatbot />} />
+                <Route path="/stock-levels" element={<StockLevels />} />
+
+                <Route element={<ProtectedRoute allowedRoles={['admin', 'manager']} />}>
+                  <Route path="/forecasting" element={<Forecasting />} />
+                  <Route path="/products" element={<Products />} />
+                  <Route path="/sales-invoices" element={<SalesInvoice />} />
+                  <Route path="/purchases" element={<Purchases />} />
+                  <Route path="/suppliers" element={<Suppliers />} />
+                  <Route path="/banking" element={<Banking />} />
+                  <Route path="/invoices" element={<Invoices />} />
+                  <Route path="/approvals" element={<Approvals />} />
+                  <Route path="/blockchain" element={<Blockchain />} />
+                </Route>
+              </Route>
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </SearchProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;

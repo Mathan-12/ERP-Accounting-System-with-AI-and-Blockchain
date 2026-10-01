@@ -1,0 +1,440 @@
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { Plus, Search, Edit, Trash2, X, ArrowLeft, Tag, Layers, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { getProducts, createProduct, updateProduct, deleteProduct, toggleProductStatus } from '../api/products';
+import clsx from 'clsx';
+import { useSearch } from '../context/SearchContext';
+
+const ProductModal = ({ isOpen, onClose, product }) => {
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+        defaultValues: product || {
+            name: '', sku: '', group: '', category: '', unit: 'PCS', opening_qty: 0, item_type: 'FINISHED', is_active: true
+        }
+    });
+    const queryClient = useQueryClient();
+
+    React.useEffect(() => {
+        reset(product || {
+            name: '', sku: '', group: '', category: '', unit: 'PCS', opening_qty: 0, item_type: 'FINISHED', is_active: true
+        });
+    }, [product, reset]);
+
+    const mutation = useMutation({
+        mutationFn: (data) => {
+            const payload = {
+                ...data,
+                opening_qty: Number(data.opening_qty),
+                is_active: (data.is_active === true || data.is_active === 'true' || data.is_active === '1')
+            };
+
+            if (product?.id) {
+                return updateProduct(product.id, payload);
+            }
+            return createProduct(payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['products']);
+            toast.success(product ? 'Product updated' : 'Product created');
+            onClose();
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Operation failed');
+        }
+    });
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+            <div className="bg-white rounded-[2.5rem] max-w-2xl w-full p-10 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300">
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <span className="text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Product Master</span>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                            {product ? 'Edit Product' : 'Create New Product'}
+                        </h2>
+                    </div>
+                    <button onClick={onClose} className="p-3 bg-slate-50 text-slate-400 hover:text-slate-900 rounded-2xl transition-all">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <Tag className="w-3 h-3 mr-2" /> Product Name
+                                </label>
+                                <input
+                                    {...register('name', { required: 'Name is required' })}
+                                    placeholder="e.g., iPhone 15 Pro"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                                {errors.name && <span className="text-red-500 text-xs font-bold">{errors.name.message}</span>}
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <Tag className="w-3 h-3 mr-2" /> Item SKU
+                                </label>
+                                <input
+                                    {...register('sku', { required: 'SKU is required' })}
+                                    placeholder="e.g., AIP-15P-128"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900 uppercase"
+                                />
+                                {errors.sku && <span className="text-red-500 text-xs font-bold">{errors.sku.message}</span>}
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    <Layers className="w-3 h-3 mr-2" /> Stock Group
+                                </label>
+                                <input
+                                    {...register('group')}
+                                    placeholder="e.g., Electronics"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    Category
+                                </label>
+                                <input
+                                    {...register('category')}
+                                    placeholder="e.g., Smartphones"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="group">
+                                    <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                        Unit
+                                    </label>
+                                    <select
+                                        {...register('unit')}
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900 appearance-none"
+                                    >
+                                        <option>PCS</option>
+                                        <option>KG</option>
+                                        <option>LTR</option>
+                                        <option>BOX</option>
+                                        <option>SET</option>
+                                    </select>
+                                </div>
+                                <div className="group">
+                                    <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                        Opening Qty
+                                    </label>
+                                    <input
+                                        type="number"
+                                        {...register('opening_qty')}
+                                        placeholder="0"
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    Item Type
+                                </label>
+                                <select
+                                    {...register('item_type')}
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900 appearance-none"
+                                >
+                                    <option value="FINISHED">Finished Goods</option>
+                                    <option value="RAW">Raw Material</option>
+                                    <option value="SEMI">Semi-Finished</option>
+                                </select>
+                            </div>
+
+                            <div className="group">
+                                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                                    Status
+                                </label>
+                                <select
+                                    {...register('is_active')}
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-slate-900 appearance-none"
+                                >
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-6">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 font-black text-slate-600 uppercase tracking-widest text-xs transition-all"
+                        >
+                            Discard
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="flex-1 px-8 py-5 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 font-black uppercase tracking-widest text-xs transition-all disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Saving...' : 'Save Product'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const Products = () => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const { searchTerm, setSearchTerm } = useSearch();
+    const navigate = useNavigate();
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 5;
+    const statusFilter = 'all';
+
+    // Query updated to include pagination & search params
+    const { data: response = {}, isLoading, isFetching } = useQuery({
+        queryKey: ['products', currentPage, searchTerm, statusFilter],
+        queryFn: () => getProducts({
+            page: currentPage,
+            limit: rowsPerPage,
+            search: searchTerm
+        }),
+        keepPreviousData: true
+    });
+
+    const queryClient = useQueryClient();
+    const deleteMutation = useMutation({
+        mutationFn: deleteProduct,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['products']);
+            toast.success('Product deleted');
+        },
+        onError: () => {
+            toast.error('Failed to delete product');
+        }
+    });
+
+    const toggleMutation = useMutation({
+        mutationFn: toggleProductStatus,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['products']);
+            toast.success(`Product status updated`);
+        },
+        onError: () => {
+            toast.error('Failed to toggle product status');
+        }
+    });
+
+    const handleEdit = (product) => {
+        setSelectedProduct(product);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this product?')) {
+            deleteMutation.mutate(id);
+        }
+    };
+
+    const handleCreate = () => {
+        setSelectedProduct(null);
+        setIsModalOpen(true);
+    }
+
+    // Since backend handles filtering and pagination, we just read the returned array
+    const products = Array.isArray(response) ? response : (response.data || []);
+    // Also pull metadata if available (if not, fallback to 1)
+    const totalPages = response.totalPages || Math.ceil(products.length / rowsPerPage) || 1;
+    const totalRecords = response.total || products.length;
+    
+    // We display rows directly (already paginated by backend)
+    const paginatedData = products;
+
+    // reset to page 1 when any search/filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    return (
+        <div className="space-y-8">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="p-3 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-2xl transition-all"
+                        title="Back to Dashboard"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <span className="text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] block">Product Catalog</span>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">All Products</h1>
+                    </div>
+                </div>
+                <button
+                    onClick={handleCreate}
+                    className="flex items-center px-6 py-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 font-black uppercase tracking-widest text-xs transition-all"
+                >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Product
+                </button>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-8 border-b border-slate-100">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                            <Search className="w-5 h-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search products by name or SKU..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-16 pr-6 py-5 bg-white border-2 border-slate-100 rounded-[2rem] focus:ring-8 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black text-slate-900 shadow-sm placeholder:text-slate-400"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-6 flex items-center text-slate-300 hover:text-slate-600 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead className="bg-slate-50/50">
+                            <tr>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Name</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">SKU</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Group</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Category</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Type</th>
+                                <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Stock</th>
+                                <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Status</th>
+                                <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-100">
+                            {isLoading || isFetching ? (
+                                <tr>
+                                    <td colSpan="8" className="px-8 py-12 text-center text-slate-400 font-bold">Loading products...</td>
+                                </tr>
+                            ) : paginatedData.length === 0 ? (
+                                <tr>
+                                    <td colSpan="8" className="px-8 py-12 text-center text-slate-400 font-bold">No products found</td>
+                                </tr>
+                            ) : (
+                                paginatedData.map((product) => (
+                                    <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
+                                        <td className="px-8 py-5 whitespace-nowrap">
+                                            <div className="text-sm font-black text-slate-900">{product.name}</div>
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600 uppercase">
+                                            {product.sku}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600">
+                                            {product.group || '-'}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600">
+                                            {product.category || '-'}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-600">
+                                            {product.item_type || 'FINISHED'}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-center text-sm font-black text-slate-900">
+                                            {product.opening_qty} {product.unit}
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-center">
+                                            <button
+                                                onClick={() => toggleMutation.mutate(product.id)}
+                                                disabled={toggleMutation.isPending}
+                                                className={clsx(
+                                                    "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-50",
+                                                    product.is_active
+                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                                )}
+                                                title={product.is_active ? 'Click to deactivate' : 'Click to activate'}
+                                            >
+                                                {product.is_active
+                                                    ? <ToggleRight className="w-4 h-4" />
+                                                    : <ToggleLeft className="w-4 h-4" />}
+                                                {product.is_active ? 'Active' : 'Inactive'}
+                                            </button>
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={() => handleEdit(product)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(product.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                    <div className="flex items-center justify-between p-8 border-t border-slate-50">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Showing products {paginatedData.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0} to {(currentPage - 1) * rowsPerPage + paginatedData.length} of {totalRecords} entries
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled={currentPage === 1 || isFetching}
+                                onClick={() => setCurrentPage(prev => prev - 1)}
+                                className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 hover:text-white disabled:opacity-30 transition-all border border-slate-100"
+                            >
+                                Previous
+                            </button>
+
+                            <span className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-widest">
+                                Page {currentPage} of {totalPages}
+                            </span>
+
+                            <button
+                                disabled={currentPage >= totalPages || isFetching}
+                                onClick={() => setCurrentPage(prev => prev + 1)}
+                                className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 hover:text-white disabled:opacity-30 transition-all border border-slate-100"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ProductModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                product={selectedProduct}
+            />
+        </div>
+    );
+};
+
+export default Products;
